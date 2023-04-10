@@ -27,7 +27,7 @@ export async function hourlyLiveStreamNotifications(
         scheduledVideo.videoScheduledStartTime
       );
       if (videoScheduledStartTime > now) {
-        if (!scheduledStartTime.includes(scheduledVideo)) {
+        if (scheduledStartTime.includes(scheduledVideo)) {
           liveStreamVideos.splice(i, 1);
           continue;
         } else {
@@ -121,6 +121,7 @@ async function getLiveStreamsVideos() {
 }
 
 async function getYoutubeLiveStreams(channelIds) {
+  // It's important to not use youtube.search.list due to the large query points.
   const liveStreams = [];
 
   for (const channelId of channelIds) {
