@@ -9,7 +9,7 @@ const youtube = google.youtube({
   auth: process.env.YOUTUBE_API_KEY,
 });
 
-export function receiveCommandAdd(userMessageContent, messageStack) {
+export async function receiveCommandAdd(userMessageContent, messageStack) {
   try {
     const platformIndex = validatePlatformInMessage(
       userMessageContent,
@@ -23,9 +23,9 @@ export function receiveCommandAdd(userMessageContent, messageStack) {
     );
 
     if (platform === "youtube") {
-      addYoutubeChannelToJson(channelName, messageStack);
+      await addYoutubeChannelToJson(channelName, messageStack);
     } else if (platform === "twitch") {
-      addTwitchChannelToJson(channelName, messageStack);
+      await addTwitchChannelToJson(channelName, messageStack);
     }
   } catch (error) {
     console.error(error);
@@ -125,7 +125,7 @@ function writeChannelToJson(channelData, platform, messageStack) {
 
   try {
     const channels = JSON.parse(fs.readFileSync(`./database/${platform}.json`));
-    const youtubeNames = channels.youtube.map((channel) => channel.name);
+    const youtubeNames = channels.map((channel) => channel.name);
 
     if (youtubeNames.includes(channel.name)) {
       messageStack.channel.send(`Channel "${channel.name}" already exists`);

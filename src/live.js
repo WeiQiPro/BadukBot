@@ -2,7 +2,6 @@ import fs from "fs";
 import fetch from "node-fetch";
 import { parse } from "node-html-parser";
 import { google } from "googleapis";
-import { Message } from "discord.js";
 
 import dotenv from "dotenv";
 dotenv.config({ path: "./database/.env" });
@@ -14,7 +13,7 @@ const youtube = google.youtube({
 
 export async function hourlyLiveStreamNotifications(
   client,
-  scheduledStartTime
+  scheduledVideosToPost
 ) {
   try {
     const now = new Date();
@@ -27,70 +26,45 @@ export async function hourlyLiveStreamNotifications(
         scheduledVideo.videoScheduledStartTime
       );
       if (videoScheduledStartTime > now) {
-        if (scheduledStartTime.includes(scheduledVideo)) {
+        if (
+          scheduledVideosToPost.some(
+            (video) => video.videoURL === scheduledVideo.videoURL
+          )
+        ) {
           liveStreamVideos.splice(i, 1);
           continue;
         } else {
-          scheduledStartTime.push(scheduledVideo);
+          scheduledVideosToPost.push(scheduledVideo);
           liveStreamVideos.splice(i, 1);
         }
       }
     }
 
-    const lastMessages = await getChannelsLastMessages(
-      client,
-      notificationChannels
-    );
-
-    const lastBotMessages = lastMessages.map((messages) =>
-      messages.filter((message) => message.author.id === client.user.id)
-    );
-
-    postLiveVideosToChannels(
-      lastBotMessages,
-      liveStreamVideos,
-      notificationChannels,
-      client
-    );
+    postLiveVideosToChannels(liveStreamVideos, notificationChannels, client);
   } catch (error) {
     console.error(`Error in hourlyLiveStreamNotifications: ${error}`);
   }
 }
 
-function postLiveVideosToChannels(
-  lastBotMessages,
+async function postLiveVideosToChannels(
   liveStreamVideos,
   notificationChannels,
   client
 ) {
   for (const liveStreamVideo of liveStreamVideos) {
     const message = `${liveStreamVideo.channelName} is live!\n${liveStreamVideo.videoTitle}\n${liveStreamVideo.videoURL}`;
-    const messageStack = lastBotMessages.find((messages) =>
-      messages.find((message) => {
-        // Check if the message includes the liveStreamVideo URL
-        return message.content.includes(liveStreamVideo.videoURL);
-      })
-    );
     for (const channel of notificationChannels) {
-      if (!messageStack) {
+      const messages = await client.channels.cache
+        .get(channel)
+        .messages.fetch({ limit: 25 });
+      const messageWithUrl = messages.find((msg) =>
+        msg.content.includes(liveStreamVideo.videoURL)
+      );
+      if (!messageWithUrl) {
         client.channels.cache.get(channel).send(message);
         console.log(`Posted ${message} to ${channel}`);
       }
     }
-  }
-}
-
-async function getChannelsLastMessages(client, channels) {
-  try {
-    return await Promise.all(
-      channels
-        .map((channelId) => client.channels.cache.get(channelId))
-        .filter((channel) => channel && channel.type === 0) // Filter out non-text channels
-        .map((channel) => channel.messages.fetch({ limit: 100 }))
-    );
-  } catch (error) {
-    console.error(`Error in getChannelsLastMessages: ${error}`);
-    return [];
   }
 }
 
@@ -121,7 +95,6 @@ async function getLiveStreamsVideos() {
 }
 
 async function getYoutubeLiveStreams(channelIds) {
-  // It's important to not use youtube.search.list due to the large query points.
   const liveStreams = [];
 
   for (const channelId of channelIds) {

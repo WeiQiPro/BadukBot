@@ -22,7 +22,7 @@ const client = new Client({
   ],
 });
 
-const SendCommandsList = () => {
+const returnCommandList = () => {
   return `**Commands List**\n
   **!add** - This will add user or channel to the list of notifications. Please use the following format: **!add** {**youtube**, **twitch**} {**channel name**}
   **!battle** - This will send a message to all guilds and their linked channels with your battle link. Please use the following format: **!battle** **{time in minutes}** {**link**}
@@ -35,38 +35,31 @@ const SendCommandsList = () => {
   `;
 };
 
-const channelJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "database", "channels.json"), "utf8")
-);
-const youtubeJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "database", "youtube.json"), "utf8")
-);
-const twitchJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "database", "twitch.json"), "utf8")
-);
-
-const guilds = channelJson.guilds;
-
-let twitchJsonChannels = twitchJson.twitch;
-let youtubeJsonChannels = youtubeJson.youtube;
-
-let scheduledStartTime = [];
-let guildsNotificationChannels = [];
-let guildsTsumegoChannels = [];
-let guildsPvPChannels = [];
-
 client.login(TOKEN);
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
+  let guildsNotificationChannels = [];
+  let guildsTsumegoChannels = [];
+  let guildsPvPChannels = [];
+
+  const channelJson = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "database", "channels.json"),
+      "utf8"
+    )
+  );
+  const guilds = channelJson.guilds;
+
+  let scheduledVideosToPost = [];
   guilds.forEach((guild) => {
     guildsNotificationChannels.push(guild.channels.notification);
     guildsTsumegoChannels.push(guild.channels.tsumego);
     guildsPvPChannels.push(guild.channels.battles);
   });
 
-  hourlyLiveStreamNotifications(client, scheduledStartTime);
+  hourlyLiveStreamNotifications(client, scheduledVideosToPost);
 
   // Calculate time remaining until the next hour
   const now = new Date();
@@ -80,29 +73,22 @@ client.on("ready", () => {
   setTimeout(() => {
     // Call hourlyLiveNotifications every hour
     setInterval(() => {
-      hourlyLiveStreamNotifications(client, scheduledStartTime);
+      hourlyLiveStreamNotifications(client, scheduledVideosToPost);
     }, 60 * 60 * 1000);
 
     // Call hourlyLiveNotifications for the first time on the hour
-    hourlyLiveStreamNotifications(client, scheduledStartTime);
+    hourlyLiveStreamNotifications(client, scheduledVideosToPost);
   }, millisecondsUntilNextHour);
 
   // Check for scheduled videos every 10 minute
   setInterval(() => {
-    if (scheduledStartTime.length != 0) {
-      console.log(
-        `scheduled Streams ${scheduledStartTime
-          .map((scheduledVideo) => JSON.stringify(scheduledVideo))
-          .join(", ")}`
-      );
-    }
     const now = new Date();
     const tenMinutesBefore = new Date(now.getTime() + 10 * 60 * 1000);
 
-    for (const scheduledVideo of scheduledStartTime) {
-      const videoScheduledStartTime = new Date(
-        scheduledVideo.videoScheduledStartTime
-      );
+    for (let i = scheduledVideosToPost.length - 1; i >= 0; i--) {
+      const scheduledVideo = scheduledVideosToPost[i];
+      const videoScheduledStartTime = new Date(scheduledVideo.videoScheduledStartTime);
+
       if (videoScheduledStartTime <= tenMinutesBefore) {
         // Post the scheduled video notification
         const message = `${scheduledVideo.channelName} will be live in 10 minutes!\n${scheduledVideo.videoTitle}\n${scheduledVideo.videoURL}`;
@@ -118,13 +104,11 @@ client.on("ready", () => {
         }
 
         // Remove the scheduled video from the list
-        const index = scheduledStartTime.indexOf(scheduledVideo);
-        if (index !== -1) {
-          scheduledStartTime.splice(index, 1);
-        }
+        scheduledVideosToPost.splice(i, 1);
       }
     }
   }, 10 * 60 * 1000);
+
 });
 
 client.on("messageCreate", (discordMessageStack) => {
@@ -156,31 +140,44 @@ function readUserSentCommand(
     ? true
     : false;
 
-  if (commandSentByUser === "add") {
-    receiveCommandAdd(userMessageContent, messageStack);
-  }
+  const Tangjie = "128781081292832768";
 
-  if (commandSentByUser === "remove") {
-    receiveCommandRemove(userMessageContent, messageStack);
-  }
-
-  if (commandSentByUser === "tsumego") {
-    receiveCommandTsumego(userMessageContent, messageStack);
-  }
-
-  if (commandSentByUser === "battle") {
-    receiveCommandBattle(userMessageContent, messageStack, client);
-  }
-
-  if (commandSentByUser === "sgf") {
-    receiveCommandSGF(userMessageContent, messageStack);
-  }
-
-  if (commandSentByUser === "here" && doesUserHavePermission) {
-    receiveCommandHere(userMessageContent, messageStack);
-  }
-
-  if (commandSentByUser === "help") {
-    messageStack.channel.send(SendCommandsList());
+  switch (commandSentByUser) {
+    case "add":
+      if (messageStack.author.id === Tangjie) {
+        receiveCommandAdd(userMessageContent, messageStack);
+      } else {
+        messageStack.channel.send("You do not have permission to use this.");
+      }
+      break;
+    case "remove":
+      if (messageStack.author.id === Tangjie) {
+        receiveCommandRemove(userMessageContent, messageStack);
+      } else {
+        messageStack.channel.send("You do not have permission to use this.");
+      }
+      break;
+    case "tsumego":
+      receiveCommandTsumego(userMessageContent, messageStack);
+      break;
+    case "battle":
+      receiveCommandBattle(userMessageContent, messageStack, client);
+      break;
+    case "sgf":
+      receiveCommandSGF(userMessageContent, messageStack);
+      break;
+    case "here":
+      if (doesUserHavePermission) {
+        receiveCommandHere(userMessageContent, messageStack);
+      } else {
+        messageStack.channel.send("You do not have permission to use this.");
+      }
+      break;
+    case "help":
+      messageStack.channel.send(returnCommandList());
+      break;
+    default:
+      messageStack.channel.send("Command not found.");
+      break;
   }
 }
