@@ -1,0 +1,9 @@
+{
+  "twitch": [
+    {
+      "name": "twitch",
+      "url": "https://api.twitch.tv/kraken/streams/summit1g",
+      "id": "summit1g"
+    }
+  ]
+}

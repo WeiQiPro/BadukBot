@@ -1,0 +1,26 @@
+{
+  "guilds": [
+    {
+      "name": "Guild Name",
+      "id": "Guild ID",
+      "channels": {
+        "notification": {
+          "name": "Channel Name",
+          "id": "Channel ID"
+        },
+        "tsumego": {
+          "name": "Channel Name",
+          "id": "Channel ID"
+        },
+        "battles": {
+          "name": "Channel Name",
+          "id": "Channel ID"
+        },
+        "sgf": {
+          "name": "Channel Name",
+          "id": "Channel ID"
+        }
+      }
+    }
+  ]
+}
