@@ -77,7 +77,7 @@ client.on("ready", () => {
   // Check for scheduled videos every 10 minute
   setInterval(() => {
     if (scheduledStartTime.length != 0) {
-      console.log(`scheduled Streams ${scheduledStartTime.join(", ")}`);
+      console.log(`scheduled Streams ${scheduledStartTime.map(scheduledVideo => JSON.stringify(scheduledVideo)).join(", ")}`);
     }
     const now = new Date();
     const tenMinutesBefore = new Date(now.getTime() + 10 * 60 * 1000);

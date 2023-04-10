@@ -20,8 +20,13 @@ export async function hourlyLiveStreamNotifications(client, scheduledStartTime) 
       const scheduledVideo = liveStreamVideos[i];
       const videoScheduledStartTime = new Date(scheduledVideo.videoScheduledStartTime);
       if (videoScheduledStartTime > now) {
-        scheduledStartTime.push(scheduledVideo);
-        liveStreamVideos.splice(i, 1);
+        if(!scheduledStartTime.includes(scheduledVideo)) {
+          liveStreamVideos.splice(i, 1);
+          continue
+        } else {
+          scheduledStartTime.push(scheduledVideo);
+          liveStreamVideos.splice(i, 1);
+        }
       }
     }
 
