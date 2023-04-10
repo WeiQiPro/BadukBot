@@ -4,13 +4,18 @@ import { parse } from "node-html-parser";
 import { google } from "googleapis";
 import { Message } from "discord.js";
 
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config({ path: "./database/.env" });
 
-const youtube = google.youtube({ version: 'v3', auth: process.env.YOUTUBE_API_KEY });
+const youtube = google.youtube({
+  version: "v3",
+  auth: process.env.YOUTUBE_API_KEY,
+});
 
-
-export async function hourlyLiveStreamNotifications(client, scheduledStartTime) {
+export async function hourlyLiveStreamNotifications(
+  client,
+  scheduledStartTime
+) {
   try {
     const now = new Date();
     const notificationChannels = await getNotificationChannelsFromJson();
@@ -18,11 +23,13 @@ export async function hourlyLiveStreamNotifications(client, scheduledStartTime) 
 
     for (let i = liveStreamVideos.length - 1; i >= 0; i--) {
       const scheduledVideo = liveStreamVideos[i];
-      const videoScheduledStartTime = new Date(scheduledVideo.videoScheduledStartTime);
+      const videoScheduledStartTime = new Date(
+        scheduledVideo.videoScheduledStartTime
+      );
       if (videoScheduledStartTime > now) {
-        if(!scheduledStartTime.includes(scheduledVideo)) {
+        if (!scheduledStartTime.includes(scheduledVideo)) {
           liveStreamVideos.splice(i, 1);
-          continue
+          continue;
         } else {
           scheduledStartTime.push(scheduledVideo);
           liveStreamVideos.splice(i, 1);
@@ -30,17 +37,32 @@ export async function hourlyLiveStreamNotifications(client, scheduledStartTime) 
       }
     }
 
-    const lastMessages = await getChannelsLastMessages(client, notificationChannels);
+    const lastMessages = await getChannelsLastMessages(
+      client,
+      notificationChannels
+    );
 
-    const lastBotMessages = lastMessages.map((messages) => messages.filter((message) => message.author.id === client.user.id));
+    const lastBotMessages = lastMessages.map((messages) =>
+      messages.filter((message) => message.author.id === client.user.id)
+    );
 
-    postLiveVideosToChannels(lastBotMessages, liveStreamVideos, notificationChannels, client);
+    postLiveVideosToChannels(
+      lastBotMessages,
+      liveStreamVideos,
+      notificationChannels,
+      client
+    );
   } catch (error) {
     console.error(`Error in hourlyLiveStreamNotifications: ${error}`);
   }
 }
 
-function postLiveVideosToChannels(lastBotMessages, liveStreamVideos, notificationChannels, client) {
+function postLiveVideosToChannels(
+  lastBotMessages,
+  liveStreamVideos,
+  notificationChannels,
+  client
+) {
   for (const liveStreamVideo of liveStreamVideos) {
     const message = `${liveStreamVideo.channelName} is live!\n${liveStreamVideo.videoTitle}\n${liveStreamVideo.videoURL}`;
     const messageStack = lastBotMessages.find((messages) =>
@@ -57,7 +79,6 @@ function postLiveVideosToChannels(lastBotMessages, liveStreamVideos, notificatio
     }
   }
 }
-
 
 async function getChannelsLastMessages(client, channels) {
   try {
@@ -87,12 +108,10 @@ async function getNotificationChannelsFromJson() {
   return notificationChannels;
 }
 
-
-
-
-
 async function getLiveStreamsVideos() {
-  const youtubeChannels = JSON.parse(fs.readFileSync("./database/youtube.json"));
+  const youtubeChannels = JSON.parse(
+    fs.readFileSync("./database/youtube.json")
+  );
   // const twitchChannels = JSON.parse(fs.readFileSync("./database/twitch.json"));
 
   const youtubeLiveStreams = await getLiveStreamsFromYoutube(youtubeChannels);
@@ -108,9 +127,11 @@ async function getYoutubeLiveStreams(channelIds) {
     const { isStreaming, canonicalURL } = await isChannelStreaming(channelId);
 
     if (isStreaming) {
-      const videoId = canonicalURL.split('/watch?v=')[1];
+      const videoId = canonicalURL.split("/watch?v=")[1];
       const videoDetails = await getVideoDetails(videoId);
-      const scheduledStartTime = new Date(videoDetails.liveStreamingDetails.scheduledStartTime);
+      const scheduledStartTime = new Date(
+        videoDetails.liveStreamingDetails.scheduledStartTime
+      );
       const videoTitle = videoDetails.snippet.title;
 
       liveStreams.push({
@@ -128,16 +149,16 @@ async function isChannelStreaming(channelId) {
   const response = await fetch(`https://youtube.com/channel/${channelId}/live`);
   const text = await response.text();
   const html = parse(text);
-  const canonicalURLTag = html.querySelector('link[rel=canonical]');
-  const canonicalURL = canonicalURLTag.getAttribute('href');
-  const isStreaming = canonicalURL.includes('/watch?v=');
+  const canonicalURLTag = html.querySelector("link[rel=canonical]");
+  const canonicalURL = canonicalURLTag.getAttribute("href");
+  const isStreaming = canonicalURL.includes("/watch?v=");
 
   return { isStreaming, canonicalURL };
 }
 
 async function getVideoDetails(videoId) {
   const response = await youtube.videos.list({
-    part: 'snippet,liveStreamingDetails',
+    part: "snippet,liveStreamingDetails",
     id: videoId,
   });
 

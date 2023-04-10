@@ -1,22 +1,26 @@
 // import { receiveCommandTsumego } from './src/tsumego.js';
-import { receiveCommandBattle } from './src/battle.js';
-import { receiveCommandRemove } from './src/remove.js';
+import { receiveCommandBattle } from "./src/battle.js";
+import { receiveCommandRemove } from "./src/remove.js";
 // import { receiveCommandSgf } from './src/sgf.js';
-import { receiveCommandHere } from './src/here.js';
-import { hourlyLiveStreamNotifications } from './src/live.js';
-import { receiveCommandAdd } from './src/add.js';
+import { receiveCommandHere } from "./src/here.js";
+import { hourlyLiveStreamNotifications } from "./src/live.js";
+import { receiveCommandAdd } from "./src/add.js";
 
-
-
-import pkg from 'discord.js';
-import fs from 'fs';
-import dotenv from 'dotenv';
-import path from 'path';
+import pkg from "discord.js";
+import fs from "fs";
+import dotenv from "dotenv";
+import path from "path";
 dotenv.config({ path: "./database/.env" });
 
 const { TOKEN, PREFIX, YOUTUBE_API_KEY } = process.env;
 const { Client, GatewayIntentBits, Permissions, PermissionsBitField } = pkg;
-const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
 const SendCommandsList = () => {
   return `**Commands List**\n
@@ -29,11 +33,17 @@ const SendCommandsList = () => {
   **!sgf** - Creates a GIF from an SGF file.
   **!tsumego** - This will display the list of tsumego problems.
   `;
-}
+};
 
-const channelJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'database', 'channels.json'), 'utf8'));
-const youtubeJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'database', 'youtube.json'), 'utf8'));
-const twitchJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'database', 'twitch.json'), 'utf8'));
+const channelJson = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "database", "channels.json"), "utf8")
+);
+const youtubeJson = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "database", "youtube.json"), "utf8")
+);
+const twitchJson = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "database", "twitch.json"), "utf8")
+);
 
 const guilds = channelJson.guilds;
 
@@ -47,11 +57,10 @@ let guildsPvPChannels = [];
 
 client.login(TOKEN);
 
-
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
-  guilds.forEach(guild => {
+  guilds.forEach((guild) => {
     guildsNotificationChannels.push(guild.channels.notification);
     guildsTsumegoChannels.push(guild.channels.tsumego);
     guildsPvPChannels.push(guild.channels.battles);
@@ -61,7 +70,11 @@ client.on("ready", () => {
 
   // Calculate time remaining until the next hour
   const now = new Date();
-  const millisecondsUntilNextHour = 60 * 60 * 1000 - (now.getMinutes() * 60 * 1000 + now.getSeconds() * 1000 + now.getMilliseconds());
+  const millisecondsUntilNextHour =
+    60 * 60 * 1000 -
+    (now.getMinutes() * 60 * 1000 +
+      now.getSeconds() * 1000 +
+      now.getMilliseconds());
 
   // Set a timeout to start the hourly interval on the hour
   setTimeout(() => {
@@ -77,19 +90,24 @@ client.on("ready", () => {
   // Check for scheduled videos every 10 minute
   setInterval(() => {
     if (scheduledStartTime.length != 0) {
-      console.log(`scheduled Streams ${scheduledStartTime.map(scheduledVideo => JSON.stringify(scheduledVideo)).join(", ")}`);
+      console.log(
+        `scheduled Streams ${scheduledStartTime
+          .map((scheduledVideo) => JSON.stringify(scheduledVideo))
+          .join(", ")}`
+      );
     }
     const now = new Date();
     const tenMinutesBefore = new Date(now.getTime() + 10 * 60 * 1000);
 
     for (const scheduledVideo of scheduledStartTime) {
-      const videoScheduledStartTime = new Date(scheduledVideo.videoScheduledStartTime);
+      const videoScheduledStartTime = new Date(
+        scheduledVideo.videoScheduledStartTime
+      );
       if (videoScheduledStartTime <= tenMinutesBefore) {
         // Post the scheduled video notification
         const message = `${scheduledVideo.channelName} will be live in 10 minutes!\n${scheduledVideo.videoTitle}\n${scheduledVideo.videoURL}`;
 
         for (const channelId of guildsNotificationChannels) {
-
           const channel = client.channels.cache.get(channelId);
 
           if (channel) {
@@ -98,7 +116,6 @@ client.on("ready", () => {
             console.error(`Channel with ID ${channelId} not found in cache.`);
           }
         }
-
 
         // Remove the scheduled video from the list
         const index = scheduledStartTime.indexOf(scheduledVideo);
@@ -110,45 +127,60 @@ client.on("ready", () => {
   }, 10 * 60 * 1000);
 });
 
+client.on("messageCreate", (discordMessageStack) => {
+  if (
+    discordMessageStack.author.bot ||
+    !discordMessageStack.content.toLowerCase().startsWith(PREFIX)
+  )
+    return;
 
-client.on('messageCreate', (discordMessageStack) => {
-  if (discordMessageStack.author.bot || !discordMessageStack.content.toLowerCase().startsWith(PREFIX)) return;
-
-  const args = discordMessageStack.content.slice(PREFIX.length).trim().split(/ +/);
+  const args = discordMessageStack.content
+    .slice(PREFIX.length)
+    .trim()
+    .split(/ +/);
   const command = args.shift().toLowerCase();
   if (command) {
     readUserSentCommand(command, args, discordMessageStack);
   }
 });
 
-function readUserSentCommand(commandSentByUser, userMessageContent, messageStack) {
-    const doesUserHavePermission = (messageStack.member.permissions.has([PermissionsBitField.Flags.KickMembers, PermissionsBitField.Flags.BanMembers])) ? true : false;
+function readUserSentCommand(
+  commandSentByUser,
+  userMessageContent,
+  messageStack
+) {
+  const doesUserHavePermission = messageStack.member.permissions.has([
+    PermissionsBitField.Flags.KickMembers,
+    PermissionsBitField.Flags.BanMembers,
+  ])
+    ? true
+    : false;
 
-    if (commandSentByUser === "add"){
-      receiveCommandAdd(userMessageContent, messageStack);
-    }
-
-    if (commandSentByUser === "remove"){
-      receiveCommandRemove(userMessageContent, messageStack);
-    }
-
-    if (commandSentByUser === "tsumego"){
-      receiveCommandTsumego(userMessageContent, messageStack);
-    }
-
-    if (commandSentByUser === "battle"){
-      receiveCommandBattle(userMessageContent, messageStack, client);
-    }
-
-    if (commandSentByUser === "sgf"){
-      receiveCommandSGF(userMessageContent, messageStack);
-    }
-
-    if (commandSentByUser === "here" && doesUserHavePermission){
-      receiveCommandHere(userMessageContent, messageStack);
-    }
-
-    if (commandSentByUser === "help"){
-      messageStack.channel.send(SendCommandsList());
-    }
+  if (commandSentByUser === "add") {
+    receiveCommandAdd(userMessageContent, messageStack);
   }
+
+  if (commandSentByUser === "remove") {
+    receiveCommandRemove(userMessageContent, messageStack);
+  }
+
+  if (commandSentByUser === "tsumego") {
+    receiveCommandTsumego(userMessageContent, messageStack);
+  }
+
+  if (commandSentByUser === "battle") {
+    receiveCommandBattle(userMessageContent, messageStack, client);
+  }
+
+  if (commandSentByUser === "sgf") {
+    receiveCommandSGF(userMessageContent, messageStack);
+  }
+
+  if (commandSentByUser === "here" && doesUserHavePermission) {
+    receiveCommandHere(userMessageContent, messageStack);
+  }
+
+  if (commandSentByUser === "help") {
+    messageStack.channel.send(SendCommandsList());
+  }
+}

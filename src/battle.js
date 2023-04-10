@@ -1,9 +1,12 @@
 import { Client } from "discord.js";
 import fs from "fs";
 
-
-export async function receiveCommandBattle(userMessageContent, messageStack, client) {
-  console.log(`User: ${messageStack.member.user.tag} is sending a battle`)
+export async function receiveCommandBattle(
+  userMessageContent,
+  messageStack,
+  client
+) {
+  console.log(`User: ${messageStack.member.user.tag} is sending a battle`);
 
   const minutesToAdd = parseInt(userMessageContent[0], 10);
   const currentTime = new Date();
@@ -19,19 +22,23 @@ export async function receiveCommandBattle(userMessageContent, messageStack, cli
   const userTag = messageStack.member.user.tag;
   const username = userTag.match(/^[^#]+/)[0];
 
-  const messageSent = await sendBattleToChannels(username, timeStamp, battleURL, client);
+  const messageSent = await sendBattleToChannels(
+    username,
+    timeStamp,
+    battleURL,
+    client
+  );
   if (!messageSent) {
     messageStack.channel.send("Error sending message to channels");
     return;
   }
 }
 
-
 function getURLFromMessage(userMessageContent, messageStack) {
   const urlContains = "pk.101weiqi.com";
   const urlRegex = new RegExp(`https://${urlContains}`, "i");
 
-  const messageContentString = userMessageContent.join(' ');
+  const messageContentString = userMessageContent.join(" ");
   const urlMatch = messageContentString.match(urlRegex);
 
   if (!urlMatch) {
@@ -40,12 +47,13 @@ function getURLFromMessage(userMessageContent, messageStack) {
   }
 
   // Find the end of the URL by looking for the first space character or the end of the string
-  const urlEnd = messageContentString.indexOf(" ", urlMatch.index) !== -1 ? messageContentString.indexOf(" ", urlMatch.index) : messageContentString.length;
+  const urlEnd =
+    messageContentString.indexOf(" ", urlMatch.index) !== -1
+      ? messageContentString.indexOf(" ", urlMatch.index)
+      : messageContentString.length;
 
   return messageContentString.slice(urlMatch.index, urlEnd);
 }
-
-
 
 async function sendBattleToChannels(user, timeStamp, battleURL, client) {
   const guildsData = JSON.parse(fs.readFileSync("./database/channels.json"));
@@ -61,10 +69,14 @@ async function sendBattleToChannels(user, timeStamp, battleURL, client) {
   try {
     for (const channel of battlesChannels) {
       const discordChannel = client.channels.cache.get(channel);
-      await discordChannel.send(`${user} has made a new battle! Starting ${timeStamp}\n ${battleURL}`);
+      await discordChannel.send(
+        `${user} has made a new battle! Starting ${timeStamp}\n ${battleURL}`
+      );
     }
   } catch (error) {
-    console.error(`Error posting battle notifications to Discord channels: ${error}`);
+    console.error(
+      `Error posting battle notifications to Discord channels: ${error}`
+    );
     return false;
   }
 

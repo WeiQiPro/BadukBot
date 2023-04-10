@@ -1,19 +1,26 @@
-import {google} from 'googleapis';
-import fs from 'fs';
-import dotenv from 'dotenv';
+import { google } from "googleapis";
+import fs from "fs";
+import dotenv from "dotenv";
 
 dotenv.config({ path: "./database/.env" });
 
-
-const youtube = google.youtube({ version: 'v3', auth: process.env.YOUTUBE_API_KEY });
+const youtube = google.youtube({
+  version: "v3",
+  auth: process.env.YOUTUBE_API_KEY,
+});
 
 export function receiveCommandAdd(userMessageContent, messageStack) {
   try {
-    const platformIndex = validatePlatformInMessage(userMessageContent, messageStack);
+    const platformIndex = validatePlatformInMessage(
+      userMessageContent,
+      messageStack
+    );
 
     const platform = userMessageContent[platformIndex];
     const channelName = userMessageContent.slice(platformIndex + 1).join(" ");
-    console.log(`User: ${messageStack.member.user.tag} is adding ${channelName} to ${platform}`);
+    console.log(
+      `User: ${messageStack.member.user.tag} is adding ${channelName} to ${platform}`
+    );
 
     if (platform === "youtube") {
       addYoutubeChannelToJson(channelName, messageStack);
@@ -22,12 +29,17 @@ export function receiveCommandAdd(userMessageContent, messageStack) {
     }
   } catch (error) {
     console.error(error);
-    messageStack.channel.send("Error occurred while adding the channel to watch list.");
+    messageStack.channel.send(
+      "Error occurred while adding the channel to watch list."
+    );
   }
 }
 
 function validatePlatformInMessage(userMessageContent, messageStack) {
-  const platformIndex = userMessageContent.indexOf("youtube") !== -1 ? userMessageContent.indexOf("youtube") : userMessageContent.indexOf("twitch");
+  const platformIndex =
+    userMessageContent.indexOf("youtube") !== -1
+      ? userMessageContent.indexOf("youtube")
+      : userMessageContent.indexOf("twitch");
   if (platformIndex === -1) {
     messageStack.channel.send("Please specify youtube or twitch");
     return;
@@ -36,35 +48,39 @@ function validatePlatformInMessage(userMessageContent, messageStack) {
 }
 
 async function addYoutubeChannelToJson(channelName, messageStack) {
-  const youtubeChannelData = await checkYoutubeForChannel(channelName, messageStack);
+  const youtubeChannelData = await checkYoutubeForChannel(
+    channelName,
+    messageStack
+  );
   if (!youtubeChannelData) {
     messageStack.channel.send("Channel not found");
     return;
   }
 
   await writeChannelToJson(youtubeChannelData, "youtube", messageStack);
-  return true
+  return true;
 }
 
 async function addTwitchChannelToJson(channelName, messageStack) {
-  const twitchChannelData = await checkTwitchForChannel(channelName, messageStack);
+  const twitchChannelData = await checkTwitchForChannel(
+    channelName,
+    messageStack
+  );
   if (!twitchChannelData) {
     messageStack.channel.send("Channel not found");
     return;
   }
 
   await writeChannelToJson(twitchChannelData, "twitch", messageStack);
-  return true
+  return true;
 }
-
-
 
 async function checkYoutubeForChannel(channelName) {
   try {
     const response = await youtube.search.list({
-      part: 'snippet',
+      part: "snippet",
       q: channelName,
-      type: 'channel',
+      type: "channel",
       maxResults: 1,
     });
 
@@ -83,9 +99,9 @@ async function checkYoutubeForChannel(channelName) {
 async function checkTwitchForChannel(channelName) {
   try {
     const response = await twitch.search.list({
-      part: 'snippet',
+      part: "snippet",
       q: channelName,
-      type: 'channel',
+      type: "channel",
       maxResults: 1,
     });
 
@@ -101,7 +117,6 @@ async function checkTwitchForChannel(channelName) {
   }
 }
 
-
 function writeChannelToJson(channelData, platform, messageStack) {
   const channel = {
     id: channelData.id,
@@ -114,15 +129,20 @@ function writeChannelToJson(channelData, platform, messageStack) {
 
     if (youtubeNames.includes(channel.name)) {
       messageStack.channel.send(`Channel "${channel.name}" already exists`);
-      console.log(`Channel "${channel.name}" already exists in ${platform}.json`);
+      console.log(
+        `Channel "${channel.name}" already exists in ${platform}.json`
+      );
       return;
     }
 
     channels.push(channel);
     fs.writeFileSync(`./database/${platform}.json`, JSON.stringify(channels));
-    messageStack.channel.send(`Successfully added channel "${channel.name}" to watch list`);
-    console.log(`Successfully added channel "${channel.name}" to ${platform}.json`);
-
+    messageStack.channel.send(
+      `Successfully added channel "${channel.name}" to watch list`
+    );
+    console.log(
+      `Successfully added channel "${channel.name}" to ${platform}.json`
+    );
   } catch (err) {
     console.error(`Error writing channel to ${platform}.json: ${err.message}`);
   }
