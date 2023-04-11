@@ -22,6 +22,11 @@ export async function hourlyLiveStreamNotifications(
 
     for (let i = liveStreamVideos.length - 1; i >= 0; i--) {
       const scheduledVideo = liveStreamVideos[i];
+
+      if (scheduledVideo.videoScheduledStartTime == "Invalid Date") {
+        scheduledVideo.videoScheduledStartTime = new Date() - 60 * 60 * 1000;
+      }
+
       const videoScheduledStartTime = new Date(
         scheduledVideo.videoScheduledStartTime
       );
@@ -33,8 +38,10 @@ export async function hourlyLiveStreamNotifications(
         ) {
           liveStreamVideos.splice(i, 1);
           continue;
-        } else {
+        } else if (videoScheduledStartTime - now < 60 * 60 * 1000) {
           scheduledVideosToPost.push(scheduledVideo);
+          liveStreamVideos.splice(i, 1);
+        } else {
           liveStreamVideos.splice(i, 1);
         }
       }
@@ -86,10 +93,7 @@ async function getLiveStreamsVideos() {
   const youtubeChannels = JSON.parse(
     fs.readFileSync("./database/youtube.json")
   );
-  // const twitchChannels = JSON.parse(fs.readFileSync("./database/twitch.json"));
-
   const youtubeLiveStreams = await getLiveStreamsFromYoutube(youtubeChannels);
-  // const twitchLiveStreams = await getLiveStreamsFromTwitch(twitchChannels);
 
   return youtubeLiveStreams;
 }
@@ -99,8 +103,7 @@ async function getYoutubeLiveStreams(channelIds) {
 
   for (const channelId of channelIds) {
     const { isStreaming, canonicalURL } = await isChannelStreaming(channelId);
-
-    if (isStreaming) {
+    if (isStreaming != false && canonicalURL != "") {
       const videoId = canonicalURL.split("/watch?v=")[1];
       const videoDetails = await getVideoDetails(videoId);
       const scheduledStartTime = new Date(
@@ -120,23 +123,41 @@ async function getYoutubeLiveStreams(channelIds) {
 }
 
 async function isChannelStreaming(channelId) {
-  const response = await fetch(`https://youtube.com/channel/${channelId}/live`);
-  const text = await response.text();
-  const html = parse(text);
-  const canonicalURLTag = html.querySelector("link[rel=canonical]");
-  const canonicalURL = canonicalURLTag.getAttribute("href");
-  const isStreaming = canonicalURL.includes("/watch?v=");
+  try {
+    const response = await fetch(
+      `https://youtube.com/channel/${channelId}/live`
+    );
+    const text = await response.text();
+    const html = parse(text);
+    const canonicalURLTag = html.querySelector("link[rel=canonical]");
+    const canonicalURL = canonicalURLTag
+      ? canonicalURLTag.getAttribute("href")
+      : "";
+    const isStreaming = canonicalURL.includes("/watch?v=");
 
-  return { isStreaming, canonicalURL };
+    return { isStreaming, canonicalURL };
+  } catch (error) {
+    console.error(`Error in isChannelStreaming: ${error}`);
+    return { isStreaming: false, canonicalURL: "" };
+  }
 }
 
 async function getVideoDetails(videoId) {
-  const response = await youtube.videos.list({
-    part: "snippet,liveStreamingDetails",
-    id: videoId,
-  });
+  try {
+    const response = await youtube.videos.list({
+      part: "snippet,liveStreamingDetails",
+      id: videoId,
+    });
 
-  return response.data.items[0];
+    if (response.data && response.data.items.length > 0) {
+      return response.data.items[0];
+    } else {
+      throw new Error("No video details found.");
+    }
+  } catch (error) {
+    console.error(`Error in getVideoDetails: ${error}`);
+    return {};
+  }
 }
 
 async function getLiveStreamsFromYoutube(youtubeChannels) {
@@ -148,7 +169,7 @@ async function getLiveStreamsFromYoutube(youtubeChannels) {
       const liveVideo = liveVideos[0]; // Assuming there's only one live stream per channel
       const liveStream = {
         channelName: channel.name,
-        channelURL: channel.url,
+        channelURL: `https://www.youtube.com/${channel.name}`,
         videoTitle: liveVideo.title,
         videoURL: liveVideo.url,
         videoScheduledStartTime: liveVideo.scheduledStartTime,

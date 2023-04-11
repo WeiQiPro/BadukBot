@@ -87,7 +87,9 @@ client.on("ready", () => {
 
     for (let i = scheduledVideosToPost.length - 1; i >= 0; i--) {
       const scheduledVideo = scheduledVideosToPost[i];
-      const videoScheduledStartTime = new Date(scheduledVideo.videoScheduledStartTime);
+      const videoScheduledStartTime = new Date(
+        scheduledVideo.videoScheduledStartTime
+      );
 
       if (videoScheduledStartTime <= tenMinutesBefore) {
         // Post the scheduled video notification
@@ -108,7 +110,6 @@ client.on("ready", () => {
       }
     }
   }, 10 * 60 * 1000);
-
 });
 
 client.on("messageCreate", (discordMessageStack) => {
