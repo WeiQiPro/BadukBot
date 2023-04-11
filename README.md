@@ -10,6 +10,7 @@ Currently implemented features:
 Work-in-progress or not yet implemented features:
 - turning SGFs into gifs
 - creating a tsumego library for discord users to call to get problems
+- Screenshotting 101 to post problems
 - challenge system to play a game between two discord members. (OGS or VGS)
 - a self-containing server ecosystem
   - notifications are only based on server preference (you add the channels you want to get notified about)
