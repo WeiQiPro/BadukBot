@@ -1,4 +1,5 @@
 // import { receiveCommandTsumego } from './src/tsumego.js';
+import { receiveCommand101 } from "./src/101.js";
 import { receiveCommandBattle } from "./src/battle.js";
 import { receiveCommandRemove } from "./src/remove.js";
 // import { receiveCommandSgf } from './src/sgf.js';
@@ -166,6 +167,9 @@ function readUserSentCommand(
       break;
     case "sgf":
       receiveCommandSGF(userMessageContent, messageStack);
+      break;
+    case "101":
+      receiveCommand101(userMessageContent, messageStack);
       break;
     case "here":
       if (doesUserHavePermission) {
