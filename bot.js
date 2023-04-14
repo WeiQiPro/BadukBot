@@ -1,10 +1,10 @@
-// import { receiveCommandTsumego } from './src/tsumego.js';
-import { receiveCommand101 } from "./src/101.js";
+import { hourlyLiveStreamNotifications, getNotificationChannelsFromJson} from "./src/live.js";
+import { receiveCommandChallenge } from "./src/challenge.js";
+import { receiveCommandTsumego } from "./src/tsumego.js";
 import { receiveCommandBattle } from "./src/battle.js";
 import { receiveCommandRemove } from "./src/remove.js";
 // import { receiveCommandSgf } from './src/sgf.js';
 import { receiveCommandHere } from "./src/here.js";
-import { hourlyLiveStreamNotifications } from "./src/live.js";
 import { receiveCommandAdd } from "./src/add.js";
 
 import pkg from "discord.js";
@@ -25,14 +25,12 @@ const client = new Client({
 
 const returnCommandList = () => {
   return `**Commands List**\n
-  **!add** - This will add user or channel to the list of notifications. Please use the following format: **!add** {**youtube**, **twitch**} {**channel name**}
-  **!battle** - This will send a message to all guilds and their linked channels with your battle link. Please use the following format: **!battle** **{time in minutes}** {**link**}
-  **!here** - This adds the current channel to the list of channels that will receive notifications. Please use the following format: **!here** {**notifications**, **tsumego**, **battle**}
-  **!help** - Displays this list of commands
-  **!live** - This will display the list of live streams if you cannot wait for the hourly updates.
-  **!remove** - This will remove user or channel from the list of notifications. Please use the following format: **!remove** {**youtube**, **twitch**} {**channel name**}
-  **!sgf** - Creates a GIF from an SGF file.
+  **!here** - This will add specific channels to their respective places. You must be an admin to set.
+        examples: !here notifications | !here tsumego | !here battles\n
   **!tsumego** - This will display the list of tsumego problems.
+        example: !tsumego 1k | !tsumego q-123456 \n
+  **!battle** - This command send a message to participating servers:
+        example: !battle 10 https://pk.101weiqi.com/not_a_real_link \n
   `;
 };
 
@@ -41,25 +39,7 @@ client.login(TOKEN);
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
-  let guildsNotificationChannels = [];
-  let guildsTsumegoChannels = [];
-  let guildsPvPChannels = [];
-
-  const channelJson = JSON.parse(
-    fs.readFileSync(
-      path.join(process.cwd(), "database", "channels.json"),
-      "utf8"
-    )
-  );
-  const guilds = channelJson.guilds;
-
   let scheduledVideosToPost = [];
-  guilds.forEach((guild) => {
-    guildsNotificationChannels.push(guild.channels.notification);
-    guildsTsumegoChannels.push(guild.channels.tsumego);
-    guildsPvPChannels.push(guild.channels.battles);
-  });
-
   hourlyLiveStreamNotifications(client, scheduledVideosToPost);
 
   // Calculate time remaining until the next hour
@@ -95,16 +75,17 @@ client.on("ready", () => {
       if (videoScheduledStartTime <= tenMinutesBefore) {
         // Post the scheduled video notification
         const message = `${scheduledVideo.channelName} will be live in 10 minutes!\n${scheduledVideo.videoTitle}\n${scheduledVideo.videoURL}`;
+        const guildsNotificationChannels = getNotificationChannelsFromJson()
+        guildsNotificationChannels.forEach((channel => {
 
-        for (const channelId of guildsNotificationChannels) {
-          const channel = client.channels.cache.get(channelId);
-
-          if (channel) {
-            channel.send(message);
-          } else {
-            console.error(`Channel with ID ${channelId} not found in cache.`);
+          try {
+            client.channels.cache.get(channel).send(message);
+            console.log(`Posted ${message} to ${channel}`);
+          } catch (error) {
+            console.error(`Channel with ID ${channel} not found in cache.`);
           }
         }
+        ));
 
         // Remove the scheduled video from the list
         scheduledVideosToPost.splice(i, 1);
@@ -168,8 +149,8 @@ function readUserSentCommand(
     case "sgf":
       receiveCommandSGF(userMessageContent, messageStack);
       break;
-    case "101":
-      receiveCommand101(userMessageContent, messageStack);
+    case "challenge":
+      receiveCommandChallenge(userMessageContent, messageStack);
       break;
     case "here":
       if (doesUserHavePermission) {

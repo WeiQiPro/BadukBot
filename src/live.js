@@ -53,7 +53,7 @@ export async function hourlyLiveStreamNotifications(
   }
 }
 
-async function postLiveVideosToChannels(
+export async function postLiveVideosToChannels(
   liveStreamVideos,
   notificationChannels,
   client
@@ -75,7 +75,7 @@ async function postLiveVideosToChannels(
   }
 }
 
-async function getNotificationChannelsFromJson() {
+export async function getNotificationChannelsFromJson() {
   const guildsData = JSON.parse(fs.readFileSync("./database/channels.json"));
   const guilds = guildsData.guilds;
   const notificationChannels = [];
