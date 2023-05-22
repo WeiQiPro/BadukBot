@@ -162,7 +162,6 @@ function readUserSentCommand (
       messageStack.channel.send(returnCommandList())
       break
     default:
-      messageStack.channel.send('Command not found.')
       break
   }
 }

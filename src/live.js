@@ -61,15 +61,19 @@ export async function postLiveVideosToChannels (
   for (const liveStreamVideo of liveStreamVideos) {
     const message = `${liveStreamVideo.channelName} is live!\n${liveStreamVideo.videoTitle}\n${liveStreamVideo.videoURL}`
     for (const channel of notificationChannels) {
-      const messages = await client.channels.cache
-        .get(channel)
-        .messages.fetch({ limit: 25 })
-      const messageWithUrl = messages.find((msg) =>
-        msg.content.includes(liveStreamVideo.videoURL)
-      )
-      if (!messageWithUrl) {
-        client.channels.cache.get(channel).send(message)
-        console.log(`Posted ${message} to ${channel}`)
+      try {
+        const messages = await client.channels.cache.get(channel).messages.fetch({ limit: 25 })
+        const messageWithUrl = messages.find((msg) =>
+          msg.content.includes(liveStreamVideo.videoURL)
+        )
+
+        if (!messageWithUrl) {
+          client.channels.cache.get(channel).send(message)
+          console.log(`Posted ${message} to ${channel}`)
+        }
+      } catch (error) {
+        console.error(`Error posting message to channel ${channel}: ${error}`)
+        console.error(error.stack)
       }
     }
   }
